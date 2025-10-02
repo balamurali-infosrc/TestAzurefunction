@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          
+
       - name: Normalize line endings (CRLF -> LF) and make scripts executable
         run: |
              # convert common script types
@@ -28,21 +28,23 @@ jobs:
              # make cli scripts executable if they have shebang
              find . -type f -exec awk 'NR==1 && /^#!/{print FILENAME}' {} + | xargs -r chmod +x
 
+        run: node path/to/script.js
+
       - name: Run script
         run: node path/to/script.js
 
       - name: Install dependencies
-        working-directory: src/
+        # working-directory: src/
         run: | 
              npm install
 
       - name: Build (if applicable)
-        working-directory: src/
+        # working-directory: src/
         run: |
               npm run build || echo "no build step"
 
       - name: Zip function package (write zip to repo root)
-        working-directory: src/
+        # working-directory: src/
         run: |
           ZIP_PATH="$GITHUB_WORKSPACE/function-package.zip"
           rm -f "$ZIP_PATH"
