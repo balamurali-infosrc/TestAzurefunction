@@ -20,9 +20,13 @@ resource "random_string" "suffix" {
   numeric = true
   special = false
 }
+# resource "azurerm_resource_group" "rg" {
+#   name     = var.rg_name
+#   location = var.location
+# }
 resource "azurerm_resource_group" "rg" {
-  name     = var.rg_name
-  location = var.location
+  name     = "demo-func-rg"
+  location = "eastus"
 }
 # Storage account name rules: lowercase, 3-24 chars, globally unique
 locals {
