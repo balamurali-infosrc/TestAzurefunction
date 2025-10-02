@@ -11,7 +11,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
-            submodules: true
+        fetch-depth: 0
       - name: Show repo tree (debug)
         # uncomment to debug file paths
         run: ls -R
@@ -22,17 +22,17 @@ jobs:
           node-version: '18'
 
       - name: Install dependencies
-        working-directory: .
+        working-directory: ./src
         run: | 
              npm install
 
       - name: Build (if applicable)
-        working-directory: .
+        working-directory: ./src
         run: |
               npm run build || echo "no build step"
 
       - name: Zip function package (write zip to repo root)
-        working-directory: .
+        working-directory: ./src
         run: |
           ZIP_PATH="$GITHUB_WORKSPACE/function-package.zip"
           rm -f "$ZIP_PATH"
