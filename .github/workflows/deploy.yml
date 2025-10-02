@@ -32,6 +32,7 @@ jobs:
            | xargs -0 -r sed -i 's/\r$//'
          # make cli scripts executable if they have shebang
            find . -type f -exec awk 'NR==1 && /^#!/{print FILENAME}' {} + | xargs -r chmod +x
+           
       - name: Run script
         run: node function/index.js
 
