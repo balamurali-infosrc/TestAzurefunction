@@ -39,8 +39,8 @@ jobs:
 
       - name: Install dependencies
         working-directory: function
-        run: npm install 
-        shell: /usr/bin/bash -e {0}
+        run: /usr/bin/bash -e -c "npm install"
+        # shell: /usr/bin/bash -e {0}
 
       - name: Build (if applicable)
         working-directory: function
