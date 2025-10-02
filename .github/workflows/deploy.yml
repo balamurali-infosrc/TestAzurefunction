@@ -31,8 +31,8 @@ jobs:
 
         # run: node path/to/script.js
 
-      - name: Run script
-        run: node path/to/script.js
+      # - name: Run script
+      #   run: node path/to/script.js
 
       - name: Install dependencies
         # working-directory: src/
