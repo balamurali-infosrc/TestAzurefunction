@@ -1,4 +1,4 @@
-name: Build-and-Deploy-Azure-Function
+name: Terraform Build-and-Deploy Azure Function
 
 on:
   push:
@@ -7,69 +7,29 @@ on:
 permissions:
   id-token: write
   contents: read
-  pages: write
 
 jobs:
-  build-and-deploy:
+  terraform-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      # Step 1: Checkout the repo
+      - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          ref: main
 
-      - name: Show repo tree (debug)
-        run: |
-          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
-          pwd
-          ls -la
-          echo "Full tree:"
-          ls -R
-
-      - name: Setup Node
+      # Step 2: Setup Node (for function deployment)
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: Normalize line endings (CRLF -> LF) and make scripts executable
-        run: |
-          # convert common script types (CRLF -> LF)
-          find . -type f \( -name '*.js' -o -name '*.sh' -o -name '*.py' \) -print0 \
-            | xargs -0 -r sed -i 's/\r$//'
-          # make CLI scripts executable if they have a shebang
-          find . -type f -exec awk 'NR==1 && /^#!/{print FILENAME}' {} + | xargs -r chmod +x
+      # Step 3: Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.7
 
-      - name: Auto-detect project directory (where package.json lives)
-        id: findproj
-        run: |
-          PKG=$(find . -type f -name package.json -print -quit || true)
-          if [ -z "$PKG" ]; then
-            echo "ERROR: no package.json found in repo. Exiting."
-            exit 1
-          fi
-          DIR=$(dirname "$PKG")
-          echo "Found package.json at: $PKG"
-          echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
-          echo "project_dir=$DIR" >> $GITHUB_OUTPUT
-
-      - name: Install dependencies
-        working-directory: ${{ env.PROJECT_DIR }}
-        run: npm install
-
-      - name: Build (if applicable)
-        working-directory: ${{ env.PROJECT_DIR }}
-        run: npm run build || echo "no build step"
-
-      - name: Zip function package (write zip to repo root)
-        working-directory: ${{ env.PROJECT_DIR }}
-        run: |
-          ZIP_PATH="$GITHUB_WORKSPACE/function-package.zip"
-          rm -f "$ZIP_PATH"
-          zip -r "$ZIP_PATH" .
-          echo "Created $ZIP_PATH"
-          ls -lh "$ZIP_PATH"
-
+      # Step 4: Azure login
       - name: Azure Login
         uses: azure/login@v1
         with:
@@ -79,129 +39,56 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           auth-type: service_principal
 
-      - name: Resolve function name and resource group (from terraform outputs or fallbacks)
-        id: get_names
+      # Step 5: Terraform init
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      # Step 6: Terraform plan (optional)
+      - name: Terraform Plan
+        working-directory: terraform
+        run: terraform plan
+
+      # Step 7: Terraform apply
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve
+
+      # Step 8: Get Terraform outputs (Function App and Resource Group)
+      - name: Get Terraform outputs
+        id: tfoutputs
+        working-directory: terraform
         run: |
-          # default fallbacks
-          FN="demo-func-app"
-          RG="demo-func-rg"
-
-          # if terraform state exists, read the outputs (replace these with your actual TF output names)
-          if [ -f terraform/terraform.tfstate ]; then
-            FN_TMP=$(cd terraform && terraform output -raw demo-func-app 2>/dev/null || true)
-            RG_TMP=$(cd terraform && terraform output -raw demo-func-rg 2>/dev/null || true)
-            if [ -n "$FN_TMP" ]; then FN="$FN_TMP"; fi
-            if [ -n "$RG_TMP" ]; then RG="$RG_TMP"; fi
-          fi
-
+          FN=$(terraform output -raw function_app_name)
+          RG=$(terraform output -raw resource_group_name)
           echo "FUNCTION_NAME=$FN" >> $GITHUB_ENV
           echo "RG=$RG" >> $GITHUB_ENV
           echo "function_name=$FN" >> $GITHUB_OUTPUT
           echo "resource_group=$RG" >> $GITHUB_OUTPUT
-          echo "Resolved FUNCTION_NAME=$FN and RG=$RG"
 
-      - name: Ensure resource group exists
+      # Step 9: Build Node project
+      - name: Install dependencies
+        working-directory: src/function
+        run: npm install
+
+      - name: Build function
+        working-directory: src/function
+        run: npm run build || echo "no build step"
+
+      # Step 10: Zip function
+      - name: Zip function package
+        working-directory: src/function
         run: |
-         az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-         if ! az group show -n "${{ env.RG }}" >/dev/null 2>&1; then
-         echo "Resource group ${{ env.RG }} not found. Creating..."
-         az group create --name "${{ env.RG }}" --location eastus
-         fi
+          ZIP_PATH="$GITHUB_WORKSPACE/function-package.zip"
+          rm -f "$ZIP_PATH"
+          zip -r "$ZIP_PATH" .
+          echo "Created $ZIP_PATH"
 
-          echo "Active subscription:"
-          az account show --query "{name:name, id:id, tenantId:tenantId}" -o table
-
-          echo "Checking resource group: $RG"
-          if az group show -n "$RG" >/dev/null 2>&1; then
-            echo "Resource group $RG exists."
-          else
-            echo "ERROR: Resource group $RG not found in the active subscription."
-            echo "Run Terraform apply to create it or create it manually, or ensure the service principal has access to the subscription."
-            az group list -o table
-            exit 1
-          fi
-      # - name: Setup Terraform
-      #   uses: hashicorp/setup-terraform@v2
-      #   with:
-      #     terraform_version: 1.8.5
-
-
-      # - name: Terraform Init
-      #   working-directory: terraform
-      #   run: terraform init
-
-      # - name: Terraform Apply
-      #   working-directory: terraform
-      #   run: terraform apply -auto-approve
-
-        #  STORAGE_ACCOUNT="myfuncstorage"
-
-      # - name: Ensure Function App exists
-      #   run: |
-      #    RG="demo-func-rg"
-      #    FUNCTION_NAME="demo-func-app"
-      #    STORAGE_ACCOUNT="<your_storage_account_name>"  # must exist
-
-      #     if ! az functionapp show --name "$FUNCTION_NAME" --resource-group "$RG" >/dev/null 2>&1; then
-      #     echo "Function App $FUNCTION_NAME does not exist. Creating..."
-      #     az functionapp create \
-      #     --resource-group "$RG" \
-      #     --consumption-plan-location "eastus" \
-      #     --runtime node \
-      #     --functions-version 4 \
-      #     --name "$FUNCTION_NAME" \
-      #     --storage-account "$STORAGE_ACCOUNT"
-      #    else
-      #    echo "Function App $FUNCTION_NAME already exists."
-      #    fi
-      # - name: Ensure storage account exists
-      #   run: |
-      #    RG="demo-func-rg"
-      #    STORAGE_ACCOUNT="funcstorage$RANDOM$GITHUB_RUN_ID"
-    
-      #    echo "Using storage account: $STORAGE_ACCOUNT"
-
-      #    if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group "$RG" >/dev/null 2>&1; then
-      #    echo "Creating storage account $STORAGE_ACCOUNT"
-      #    az storage account create \
-      #     --name "$STORAGE_ACCOUNT" \
-      #     --resource-group "$RG" \
-      #     --location eastus \
-      #     --sku Standard_LRS
-      #     else
-      #    echo "Storage account $STORAGE_ACCOUNT exists"
-      #    fi
-
-      # - name: Ensure Function App exists
-      #   run: |
-      #     RG="demo-func-rg"
-      #     FUNCTION_NAME="demo-func-app"
-      #     STORAGE_ACCOUNT="myfuncstorage"
-
-      #     # Create storage account if needed
-      #      if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group "$RG" >/dev/null 2>&1; then
-      #      az storage account create \
-      #      --name "$STORAGE_ACCOUNT" \
-      #      --resource-group "$RG" \
-      #      --location eastus \
-      #     --sku Standard_LRS
-      #     fi
-
-      #     # Create Function App if needed
-      #      if ! az functionapp show --name "$FUNCTION_NAME" --resource-group "$RG" >/dev/null 2>&1; then
-      #     az functionapp create \
-      #     --resource-group "$RG" \
-      #     --consumption-plan-location eastus \
-      #     --runtime node \
-      #     --functions-version 4 \
-      #     --name "$FUNCTION_NAME" \
-      #     --storage-account "$STORAGE_ACCOUNT"
-      #     fi
-
-      - name: Deploy zip to Function App
+      # Step 11: Deploy function
+      - name: Deploy function
         run: |
-          echo "Deploying demo-func-app in resource group demo-func-rg"
+          echo "Deploying $FUNCTION_NAME to $RG"
           az functionapp deployment source config-zip \
-            --resource-group "demo-func-rg" \
-            --name "demo-func-app" \
+            --resource-group "$RG" \
+            --name "$FUNCTION_NAME" \
             --src "$GITHUB_WORKSPACE/function-package.zip"
