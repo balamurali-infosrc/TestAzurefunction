@@ -42,10 +42,10 @@ jobs:
           # Example assumes terraform is available and run in terraform/ directory
           # AKS example: ADAPT: here we fetch the function name and RG from terraform outputs if present
           if [ -f terraform/terraform.tfstate ]; then
-            FUNCTION_NAME=$(cd terraform && terraform output -raw function_name)
+            FUNCTION_NAME=$(cd terraform && terraform output -raw demo-func-app)
             RG=$(cd terraform && terraform output -raw resource_group)
-            echo "FUNCTION_NAME=$FUNCTION_NAME" >> $GITHUB_ENV
-            echo "RG=$RG" >> $GITHUB_ENV
+            echo "FUNCTION_NAME=demo-func-app" >> $GITHUB_ENV
+            echo "RG=demo-func-rg" >> $GITHUB_ENV
           else
             echo "RG=demo-func-rg" >> $GITHUB_ENV
             echo "FUNCTION_NAME=demo-func-app" >> $GITHUB_ENV
@@ -53,8 +53,8 @@ jobs:
 
       - name: Deploy zip to Function App
         run: |
-          echo "Deploying $FUNCTION_NAME in resource group $RG"
+          echo "Deploying demo-func-app in resource group $RG"
           az functionapp deployment source config-zip \
-            --resource-group "$RG" \
-            --name "$FUNCTION_NAME" \
+            --resource-group "demo-func-rg" \
+            --name "demo-func-app" \
             --src function-package.zip
