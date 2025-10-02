@@ -154,6 +154,24 @@ jobs:
       #    else
       #    echo "Function App $FUNCTION_NAME already exists."
       #    fi
+      - name: Ensure storage account exists
+        run: |
+         RG="demo-func-rg"
+         STORAGE_ACCOUNT="funcstorage$RANDOM$GITHUB_RUN_ID"
+    
+         echo "Using storage account: $STORAGE_ACCOUNT"
+
+         if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group "$RG" >/dev/null 2>&1; then
+         echo "Creating storage account $STORAGE_ACCOUNT"
+         az storage account create \
+          --name "$STORAGE_ACCOUNT" \
+          --resource-group "$RG" \
+          --location eastus \
+          --sku Standard_LRS
+          else
+         echo "Storage account $STORAGE_ACCOUNT exists"
+         fi
+
       - name: Ensure Function App exists
         run: |
           RG="demo-func-rg"
