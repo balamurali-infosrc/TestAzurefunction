@@ -100,26 +100,26 @@ jobs:
           echo "resource_group=$RG" >> $GITHUB_OUTPUT
           echo "Resolved FUNCTION_NAME=$FN and RG=$RG"
 
-      # - name: Ensure resource group exists
-      #   run: |
-      #    az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-      #    if ! az group show -n "${{ env.RG }}" >/dev/null 2>&1; then
-      #    echo "Resource group ${{ env.RG }} not found. Creating..."
-      #    az group create --name "${{ env.RG }}" --location eastus
-      #    fi
+      - name: Ensure resource group exists
+        run: |
+         az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+         if ! az group show -n "${{ env.RG }}" >/dev/null 2>&1; then
+         echo "Resource group ${{ env.RG }} not found. Creating..."
+         az group create --name "${{ env.RG }}" --location eastus
+         fi
 
-      #     echo "Active subscription:"
-      #     az account show --query "{name:name, id:id, tenantId:tenantId}" -o table
+          echo "Active subscription:"
+          az account show --query "{name:name, id:id, tenantId:tenantId}" -o table
 
-      #     echo "Checking resource group: $RG"
-      #     if az group show -n "$RG" >/dev/null 2>&1; then
-      #       echo "Resource group $RG exists."
-      #     else
-      #       echo "ERROR: Resource group $RG not found in the active subscription."
-      #       echo "Run Terraform apply to create it or create it manually, or ensure the service principal has access to the subscription."
-      #       az group list -o table
-      #       exit 1
-      #     fi
+          echo "Checking resource group: $RG"
+          if az group show -n "$RG" >/dev/null 2>&1; then
+            echo "Resource group $RG exists."
+          else
+            echo "ERROR: Resource group $RG not found in the active subscription."
+            echo "Run Terraform apply to create it or create it manually, or ensure the service principal has access to the subscription."
+            az group list -o table
+            exit 1
+          fi
       # - name: Setup Terraform
       #   uses: hashicorp/setup-terraform@v2
       #   with:
@@ -154,49 +154,49 @@ jobs:
       #    else
       #    echo "Function App $FUNCTION_NAME already exists."
       #    fi
-      - name: Ensure storage account exists
-        run: |
-         RG="demo-func-rg"
-         STORAGE_ACCOUNT="funcstorage$RANDOM$GITHUB_RUN_ID"
+      # - name: Ensure storage account exists
+      #   run: |
+      #    RG="demo-func-rg"
+      #    STORAGE_ACCOUNT="funcstorage$RANDOM$GITHUB_RUN_ID"
     
-         echo "Using storage account: $STORAGE_ACCOUNT"
+      #    echo "Using storage account: $STORAGE_ACCOUNT"
 
-         if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group "$RG" >/dev/null 2>&1; then
-         echo "Creating storage account $STORAGE_ACCOUNT"
-         az storage account create \
-          --name "$STORAGE_ACCOUNT" \
-          --resource-group "$RG" \
-          --location eastus \
-          --sku Standard_LRS
-          else
-         echo "Storage account $STORAGE_ACCOUNT exists"
-         fi
+      #    if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group "$RG" >/dev/null 2>&1; then
+      #    echo "Creating storage account $STORAGE_ACCOUNT"
+      #    az storage account create \
+      #     --name "$STORAGE_ACCOUNT" \
+      #     --resource-group "$RG" \
+      #     --location eastus \
+      #     --sku Standard_LRS
+      #     else
+      #    echo "Storage account $STORAGE_ACCOUNT exists"
+      #    fi
 
-      - name: Ensure Function App exists
-        run: |
-          RG="demo-func-rg"
-          FUNCTION_NAME="demo-func-app"
-          STORAGE_ACCOUNT="myfuncstorage"
+      # - name: Ensure Function App exists
+      #   run: |
+      #     RG="demo-func-rg"
+      #     FUNCTION_NAME="demo-func-app"
+      #     STORAGE_ACCOUNT="myfuncstorage"
 
-          # Create storage account if needed
-           if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group "$RG" >/dev/null 2>&1; then
-           az storage account create \
-           --name "$STORAGE_ACCOUNT" \
-           --resource-group "$RG" \
-           --location eastus \
-          --sku Standard_LRS
-          fi
+      #     # Create storage account if needed
+      #      if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group "$RG" >/dev/null 2>&1; then
+      #      az storage account create \
+      #      --name "$STORAGE_ACCOUNT" \
+      #      --resource-group "$RG" \
+      #      --location eastus \
+      #     --sku Standard_LRS
+      #     fi
 
-          # Create Function App if needed
-           if ! az functionapp show --name "$FUNCTION_NAME" --resource-group "$RG" >/dev/null 2>&1; then
-          az functionapp create \
-          --resource-group "$RG" \
-          --consumption-plan-location eastus \
-          --runtime node \
-          --functions-version 4 \
-          --name "$FUNCTION_NAME" \
-          --storage-account "$STORAGE_ACCOUNT"
-          fi
+      #     # Create Function App if needed
+      #      if ! az functionapp show --name "$FUNCTION_NAME" --resource-group "$RG" >/dev/null 2>&1; then
+      #     az functionapp create \
+      #     --resource-group "$RG" \
+      #     --consumption-plan-location eastus \
+      #     --runtime node \
+      #     --functions-version 4 \
+      #     --name "$FUNCTION_NAME" \
+      #     --storage-account "$STORAGE_ACCOUNT"
+      #     fi
 
       - name: Deploy zip to Function App
         run: |
