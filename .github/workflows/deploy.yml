@@ -17,14 +17,14 @@ jobs:
           node-version: '18'
 
       - name: Build function (example for Node)
-        working-directory: ./function
+        working-directory: ./src/function
         run: npm install
       - name: Build
-        working-directory: ./function
+        working-directory: ./src/function
         run: npm run build || echo "no build step"
         
       - name: Zip function package
-        working-directory: ./function
+        working-directory: ./src/function
         run: |
           zip -r ../function-package.zip . 
 
