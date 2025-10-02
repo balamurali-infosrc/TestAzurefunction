@@ -22,11 +22,12 @@ jobs:
 
       - name: Normalize line endings (CRLF -> LF) and make scripts executable
         run: |
-             # convert common script types
-              find . -type f \( -name '*.js' -o -name '*.sh' -o -name '*.py' \) -print0 \
-              | xargs -0 -r sed -i 's/\r$//'
-             # make cli scripts executable if they have shebang
-             find . -type f -exec awk 'NR==1 && /^#!/{print FILENAME}' {} + | xargs -r chmod +x
+         # convert common script types
+          find . -type f \( -name '*.js' -o -name '*.sh' -o -name '*.py' \) -print0 \
+           | xargs -0 -r sed -i 's/\r$//'
+         # make cli scripts executable if they have shebang
+           find . -type f -exec awk 'NR==1 && /^#!/{print FILENAME}' {} + | xargs -r chmod +x
+
 
         # run: node path/to/script.js
 
