@@ -120,7 +120,26 @@ jobs:
             az group list -o table
             exit 1
           fi
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+      - name: Ensure Function App exists
+        run: |
+         RG="demo-func-rg"
+         FUNCTION_NAME="demo-func-app"
+         STORAGE_ACCOUNT="<your_storage_account_name>"  # must exist
 
+          if ! az functionapp show --name "$FUNCTION_NAME" --resource-group "$RG" >/dev/null 2>&1; then
+          echo "Function App $FUNCTION_NAME does not exist. Creating..."
+          az functionapp create \
+          --resource-group "$RG" \
+          --consumption-plan-location "eastus" \
+          --runtime node \
+          --functions-version 4 \
+          --name "$FUNCTION_NAME" \
+          --storage-account "$STORAGE_ACCOUNT"
+         else
+         echo "Function App $FUNCTION_NAME already exists."
+         fi
       - name: Deploy zip to Function App
         run: |
           echo "Deploying demo-func-app in resource group demo-func-rg"
