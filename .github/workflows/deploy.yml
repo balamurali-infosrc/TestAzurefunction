@@ -18,10 +18,11 @@ jobs:
 
       - name: Build function (example for Node)
         working-directory: ./function
-        run: |
-          npm install
-          npm run build || echo "no build step"
-
+        run: npm install
+      - name: Build
+        working-directory: ./function
+        run: npm run build || echo "no build step"
+        
       - name: Zip function package
         working-directory: ./function
         run: |
