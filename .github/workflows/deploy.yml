@@ -28,7 +28,7 @@ jobs:
              # make cli scripts executable if they have shebang
              find . -type f -exec awk 'NR==1 && /^#!/{print FILENAME}' {} + | xargs -r chmod +x
 
-        run: node path/to/script.js
+        # run: node path/to/script.js
 
       - name: Run script
         run: node path/to/script.js
