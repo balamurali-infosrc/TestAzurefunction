@@ -77,7 +77,7 @@ jobs:
           client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
+          auth-type: service_principal
       - name: Resolve function name and resource group (fallbacks)
         id: get_names
         run: |
