@@ -32,12 +32,20 @@ jobs:
            | xargs -0 -r sed -i 's/\r$//'
          # make cli scripts executable if they have shebang
            find . -type f -exec awk 'NR==1 && /^#!/{print FILENAME}' {} + | xargs -r chmod +x
+      - name: Run script
+        run: node function/index.js
 
-
+        "scripts": {
+         "start": "node index.js",
+         "test:ci": "node function/index.js"
+              }
+         - name: Run start script
+           working-directory: function      # folder that has package.json
+           run: npm run start
         # run: node path/to/script.js
 
-      - name: Run script
-        run: node path/to/script.js
+      # - name: Run script
+      #   run: node path/to/script.js
       
 
       - name: Install dependencies
