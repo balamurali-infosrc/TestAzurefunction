@@ -103,7 +103,7 @@ jobs:
       - name: Ensure subscription and resource group exist (verify)
         run: |
           # ensure we're using the subscription from secrets (make sure the SP has access)
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account set --subscription "02a44fee-b200-4cf9-b042-9bd4aa3bebe6"
 
           echo "Active subscription:"
           az account show --query "{name:name, id:id, tenantId:tenantId}" -o table
