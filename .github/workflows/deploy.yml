@@ -79,7 +79,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           auth-type: service_principal
 
-           - name: Resolve function name and resource group (from terraform outputs or fallbacks)
+      - name: Resolve function name and resource group (from terraform outputs or fallbacks)
         id: get_names
         run: |
           # default fallbacks
