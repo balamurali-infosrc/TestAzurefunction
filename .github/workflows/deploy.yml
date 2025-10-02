@@ -25,14 +25,6 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Normalize line endings (CRLF -> LF) and make scripts executable
-        run: |
-         # convert common script types
-          find . -type f \( -name '*.js' -o -name '*.sh' -o -name '*.py' \) -print0 \
-           | xargs -0 -r sed -i 's/\r$//'
-         # make cli scripts executable if they have shebang
-           find . -type f -exec awk 'NR==1 && /^#!/{print FILENAME}' {} + | xargs -r chmod +x
-           
       - name: Run script
         run: node function/index.js
 
@@ -40,9 +32,19 @@ jobs:
          "start": "node index.js",
          "test:ci": "node function/index.js"
               }
-         - name: Run start script
-           working-directory: function      # folder that has package.json
-           run: npm run start
+        - name: Run start script
+          working-directory: src/function      # folder that has package.json
+          run: npm run start
+
+      - name: Normalize line endings (CRLF -> LF) and make scripts executable
+        run: |
+         # convert common script types
+          find . -type f \( -name '*.js' -o -name '*.sh' -o -name '*.py' \) -print0 \
+           | xargs -0 -r sed -i 's/\r$//'
+         # make cli scripts executable if they have shebang
+           find . -type f -exec awk 'NR==1 && /^#!/{print FILENAME}' {} + | xargs -r chmod +x
+
+      
         # run: node path/to/script.js
 
       # - name: Run script
