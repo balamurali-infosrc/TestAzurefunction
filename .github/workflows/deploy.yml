@@ -19,13 +19,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-      # - name: Fix line endings (convert CRLF → LF)
-      #   run: |
-      #    find . -type f -name '*.js' -o -name '*.sh' | xargs -r sed -i 's/\r$//'
-      # - name: Install dos2unix and convert
-      #   run: |
-      #    sudo apt-get update && sudo apt-get install -y dos2unix
-      #    find . -type f -name '*.js' -o -name '*.sh' -exec dos2unix {} +
+          
       - name: Normalize line endings (CRLF -> LF) and make scripts executable
         run: |
        # convert common script types
@@ -36,7 +30,7 @@ jobs:
 
       - name: Run script
         run: node path/to/script.js
-        
+
       - name: Install dependencies
         working-directory: src/
         run: | 
