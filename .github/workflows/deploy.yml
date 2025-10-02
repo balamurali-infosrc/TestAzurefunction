@@ -37,11 +37,13 @@ jobs:
       - name: Install dependencies
         working-directory: function
         run: npm install -g npm
+        shell: bash
 
       - name: Build (if applicable)
         working-directory: function
         run: |
               npm run build || echo "no build step"
+        shell: bash
 
       - name: Zip function package (write zip to repo root)
         working-directory: function
