@@ -79,27 +79,27 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           auth-type: service_principal
 
-      - name: Resolve function name and resource group (fallbacks)
+      - name: Resolve demo-func-app and demo-func-rg (fallbacks)
         id: get_names
         run: |
-          FN=""
-          RG=""
+          FN="demo-func-app"
+          RG="demo-func-rg"
           if [ -f terraform/terraform.tfstate ]; then
-            FN=$(cd terraform && terraform output -raw function_name 2>/dev/null || true)
-            RG=$(cd terraform && terraform output -raw resource_group 2>/dev/null || true)
+            FN=$(cd terraform && terraform output -raw demo-func-app 2>/dev/null || true)
+            RG=$(cd terraform && terraform output -raw demo-func-rg 2>/dev/null || true)
           fi
-          if [ -z "$FN" ]; then FN="demo-func-app"; fi
-          if [ -z "$RG" ]; then RG="demo-func-rg"; fi
-          echo "FUNCTION_NAME=$FN" >> $GITHUB_ENV
-          echo "RG=$RG" >> $GITHUB_ENV
-          echo "function_name=$FN" >> $GITHUB_OUTPUT
-          echo "resource_group=$RG" >> $GITHUB_OUTPUT
-          echo "Resolved FUNCTION_NAME=$FN and RG=$RG"
+          if [ -z "demo-func-app" ]; then FN="demo-func-app"; fi
+          if [ -z "demo-func-rg" ]; then RG="demo-func-rg"; fi
+          echo "FUNCTION_NAME=demo-func-app" >> $GITHUB_ENV
+          echo "RG=demo-func-rg" >> $GITHUB_ENV
+          echo "function_name=demo-func-app" >> $GITHUB_OUTPUT
+          echo "resource_group=demo-func-rg" >> $GITHUB_OUTPUT
+          echo "Resolved FUNCTION_NAME=demo-func-app and RG=demo-func-rg"
 
       - name: Deploy zip to Function App
         run: |
-          echo "Deploying $FUNCTION_NAME in resource group $RG"
+          echo "Deploying demo-func-app in resource group demo-func-rg"
           az functionapp deployment source config-zip \
-            --resource-group "$RG" \
-            --name "$FUNCTION_NAME" \
+            --resource-group "demo-func-rg" \
+            --name "demo-func-app" \
             --src "$GITHUB_WORKSPACE/function-package.zip"
