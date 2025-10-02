@@ -38,17 +38,18 @@ jobs:
       #   run: node path/to/script.js
       - name: Show repo tree
         run: ls -R
+
       - name: Install dependencies
-        working-directory: function
+        working-directory: src/function
         run: npm install
 
       - name: Build (if applicable)
-        working-directory: function
+        working-directory: src/function
         run: |
               npm run build || echo "no build step"
 
       - name: Zip function package (write zip to repo root)
-        working-directory: function
+        working-directory: src/function
         run: |
           ZIP_PATH="$GITHUB_WORKSPACE/function-package.zip"
           rm -f "$ZIP_PATH"
