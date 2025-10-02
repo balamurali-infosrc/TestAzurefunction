@@ -15,7 +15,7 @@ jobs:
         # uncomment to debug file paths
         run: ls -R
 
-      - name: Setup Node (if Node runtime)  # adjust for Python/.NET
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '18'
