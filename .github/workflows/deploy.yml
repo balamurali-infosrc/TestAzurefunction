@@ -88,8 +88,8 @@ jobs:
 
           # if terraform state exists, read the outputs (replace these with your actual TF output names)
           if [ -f terraform/terraform.tfstate ]; then
-            FN_TMP=$(cd terraform && terraform output -raw function_name 2>/dev/null || true)
-            RG_TMP=$(cd terraform && terraform output -raw resource_group 2>/dev/null || true)
+            FN_TMP=$(cd terraform && terraform output -raw demo-func-app 2>/dev/null || true)
+            RG_TMP=$(cd terraform && terraform output -raw demo-func-rg 2>/dev/null || true)
             if [ -n "$FN_TMP" ]; then FN="$FN_TMP"; fi
             if [ -n "$RG_TMP" ]; then RG="$RG_TMP"; fi
           fi
@@ -100,10 +100,13 @@ jobs:
           echo "resource_group=$RG" >> $GITHUB_OUTPUT
           echo "Resolved FUNCTION_NAME=$FN and RG=$RG"
 
-      - name: Ensure subscription and resource group exist (verify)
+      - name: Ensure resource group exists
         run: |
-          # ensure we're using the subscription from secrets (make sure the SP has access)
-          az account set --subscription "02a44fee-b200-4cf9-b042-9bd4aa3bebe6"
+         az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+         if ! az group show -n "${{ env.RG }}" >/dev/null 2>&1; then
+         echo "Resource group ${{ env.RG }} not found. Creating..."
+         az group create --name "${{ env.RG }}" --location eastus
+         fi
 
           echo "Active subscription:"
           az account show --query "{name:name, id:id, tenantId:tenantId}" -o table
