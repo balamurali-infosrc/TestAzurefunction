@@ -36,11 +36,11 @@ jobs:
 
       # - name: Run script
       #   run: node path/to/script.js
-
+      - name: Show repo tree
+        run: ls -R
       - name: Install dependencies
         working-directory: function
-        run: /usr/bin/bash -e -c "npm install"
-        shell: /usr/bin/bash -e {0}
+        run: npm install
 
       - name: Build (if applicable)
         working-directory: function
