@@ -120,8 +120,22 @@ jobs:
             az group list -o table
             exit 1
           fi
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.7
+
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
       - name: Terraform Apply
+        working-directory: terraform
         run: terraform apply -auto-approve
+
+         STORAGE_ACCOUNT="myfuncstorage"
+
       - name: Ensure Function App exists
         run: |
          RG="demo-func-rg"
