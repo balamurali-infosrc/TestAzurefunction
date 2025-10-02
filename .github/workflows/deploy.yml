@@ -47,10 +47,10 @@ jobs:
       - name: Run script
         run: node function/index.js
 
-        "scripts": {
-         "start": "node index.js",
-         "test:ci": "node function/index.js"
-           }
+        # "scripts": {
+        #  "start": "node index.js",
+        #  "test:ci": "node function/index.js"
+        #    }
       - name: Run start script
         working-directory: src/function      # folder that has package.json
         run: npm run start
