@@ -13,10 +13,12 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-
+        with:
+         submodules: true
       - name: Show repo tree (debug)
         # uncomment to debug file paths
         run: ls -R
+        run: node path/to/script.js
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -36,8 +38,7 @@ jobs:
 
       # - name: Run script
       #   run: node path/to/script.js
-      - name: Show repo tree
-        run: ls -R
+
 
       - name: Install dependencies
         working-directory: src/function
