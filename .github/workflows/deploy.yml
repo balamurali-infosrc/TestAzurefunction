@@ -36,7 +36,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: function
-        run: npm install
+        run: npm install -g npm
 
       - name: Build (if applicable)
         working-directory: function
