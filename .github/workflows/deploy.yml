@@ -123,8 +123,8 @@ jobs:
 
       - name: Deploy zip to Function App
         run: |
-          echo "Deploying $FUNCTION_NAME in resource group $RG"
+          echo "Deploying demo-func-app in resource group demo-func-rg"
           az functionapp deployment source config-zip \
-            --resource-group "$RG" \
-            --name "$FUNCTION_NAME" \
+            --resource-group "demo-func-rg" \
+            --name "demo-func-app" \
             --src "$GITHUB_WORKSPACE/function-package.zip"
