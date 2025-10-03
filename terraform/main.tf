@@ -50,12 +50,12 @@ resource "azurerm_app_service_plan" "plan" {
   name                = "${var.function_name}-plan"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  kind                = "Linux"
+  kind                = "Windows"
   reserved            = true
 
   sku {
-    tier = "Basic"  # Consumption
-    size = "B1"
+    tier = "Standard"  # Consumption
+    size = "S1"
   }
 }
 
