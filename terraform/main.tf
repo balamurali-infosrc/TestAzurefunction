@@ -55,7 +55,7 @@ resource "azurerm_app_service_plan" "plan" {
 
   sku {
     tier = "Dynamic"  # Consumption
-    size = "F1"
+    size = "S1"
   }
 }
 
