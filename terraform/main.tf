@@ -54,7 +54,7 @@ resource "azurerm_app_service_plan" "plan" {
   # reserved            = true
 
   sku {
-    tier = "Standard"  # Consumption
+    tier = "Premium"  # Consumption
     size = "S1"
   }
 }
