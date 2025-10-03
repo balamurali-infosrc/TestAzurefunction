@@ -78,7 +78,7 @@ resource "azurerm_linux_function_app" "function" {
       # For Python use `python_version = "3.9"` plus worker runtime in app_settings
       node_version = "18"
     }
-    ftps_state = "Disabled"
+    # ftps_state = "Disabled"
   }
  
  
