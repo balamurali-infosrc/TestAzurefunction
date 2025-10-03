@@ -29,33 +29,37 @@ resource "azurerm_resource_group" "rg" {
   location = "eastus"
 }
 # Storage account name rules: lowercase, 3-24 chars, globally unique
-locals {
-  sa_base = replace(lower("${var.function_name}sa${random_string.suffix.result}"), "-", "")
-  sa_name = substr(local.sa_base, 0, 24)
-}
+# locals {
+#   sa_base = replace(lower("${var.function_name}sa${random_string.suffix.result}"), "-", "")
+#   sa_name = substr(local.sa_base, 0, 24)
+# }
 
 resource "azurerm_storage_account" "sa" {
-#   name                     = lower(replace("${var.function_name}sa", "-", ""))[0:24] # storage account name rules
-  name                     = local.sa_name
+  name = substr(lower(replace("${var.function_name}sa", "-", "")), 0, 24)
+#  name                     = lower(replace("${var.function_name}sa", "-", ""))[0:24] # storage account name rules
+  # name                     = local.sa_name
   resource_group_name      = azurerm_resource_group.rg.name
   location                 = azurerm_resource_group.rg.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-#   allow_blob_public_access = false   # allow_blob_public_access removed for compatibility
+  # allow_blob_public_access = false   # allow_blob_public_access removed for compatibility
   min_tls_version          = "TLS1_2"
-
+  blob_properties {
+    # disable public access
+    default_service_version = "2021-06-08"
+  }
 }
 
 resource "azurerm_app_service_plan" "plan" {
   name                = "${var.function_name}-plan"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  kind                = "Windows"
-  # reserved            = true
+  kind                = "Linux"
+  reserved            = true
 
   sku {
-    tier = "Free"  # Consumption
-    size = "F1"
+    tier = "Dynamic"  # Consumption
+    size = "Y1"
   }
 }
 
