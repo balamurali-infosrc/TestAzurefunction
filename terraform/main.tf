@@ -105,7 +105,7 @@ resource "azurerm_app_service_plan" "func" {
 
 
 resource "azurerm_linux_function_app" "function" {
-  name                = "func_linx"
+  name                = "funclinx"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   service_plan_id     = azurerm_app_service_plan.func.id
