@@ -21,6 +21,9 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Install jq (needed for Kudu fallback)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -51,14 +54,14 @@ jobs:
         id: tfoutputs
         working-directory: terraform
         run: |
-          # Read the outputs that exist in your state (you reported these names)
+          # replace these names if you changed Terraform outputs
           FN=$(terraform output -raw function_name_name 2>/dev/null | sed -n '1p' | tr -d '\r')
           RG=$(terraform output -raw resource_group 2>/dev/null | sed -n '1p' | tr -d '\r')
 
           echo "Captured FN='$FN'"
           echo "Captured RG='$RG'"
 
-          # Write to GITHUB_ENV using the heredoc form (safe for any content)
+          # safe write to GITHUB_ENV
           {
             printf 'FUNCTION_NAME<<EOF\n'
             printf '%s\n' "$FN"
@@ -71,7 +74,7 @@ jobs:
             printf 'EOF\n'
           } >> $GITHUB_ENV
 
-          # Also write to GITHUB_OUTPUT for job outputs
+          # also expose as job outputs
           {
             printf 'function_name<<EOF\n'
             printf '%s\n' "$FN"
@@ -96,14 +99,7 @@ jobs:
       - name: Locate function source folder
         id: findfunc
         run: |
-          # prefer exact folder names in order of likelihood
-          CANDIDATES=(
-            "src/function"
-            "function-src"
-            "function"
-            "src"
-            "."
-          )
+          CANDIDATES=("src/function" "function-src" "function" "src" ".")
           FOUND=""
           for d in "${CANDIDATES[@]}"; do
             if [ -d "$GITHUB_WORKSPACE/$d" ]; then
@@ -112,24 +108,19 @@ jobs:
             fi
           done
 
-          # fallback: try to discover first folder named *function*
           if [ -z "$FOUND" ]; then
             DISCOVERED=$(find . -maxdepth 3 -type d -iname "*function*" -print -quit || true)
             if [ -n "$DISCOVERED" ]; then
-              # strip leading ./ if present
               FOUND="${DISCOVERED#./}"
             fi
           fi
 
           if [ -z "$FOUND" ]; then
-            echo "No function source folder found in repo. Creating src/function and attempting to copy function-src if present."
+            echo "No function source folder found. Creating src/function and copying from function-src if present."
             mkdir -p src/function
             if [ -d "function-src" ]; then
               cp -r function-src/* src/function/ || true
               FOUND="src/function"
-            else
-              # leave FOUND empty to fail later with clear message
-              FOUND=""
             fi
           fi
 
@@ -144,7 +135,6 @@ jobs:
 
       - name: Build Function (npm) if package.json present
         run: |
-          # read location from env
           DIR="${FUNCTION_DIR:-src/function}"
           echo "Building function at: $DIR"
           if [ ! -d "$DIR" ]; then
@@ -155,18 +145,16 @@ jobs:
 
           cd "$DIR"
 
-          if [ ! -f package.json ]; then
-            echo "No package.json in $DIR — skipping npm install/build. Creating a zip of contents anyway."
-          else
+          if [ -f package.json ]; then
             echo "package.json found — running npm install"
             npm install
-            # run build if it exists
-            if grep -q "\"build\"" package.json; then
+            if jq -e .scripts.build package.json >/dev/null 2>&1; then
               npm run build || true
             fi
+          else
+            echo "No package.json in $DIR — skipping npm install/build. Creating a zip of contents anyway."
           fi
 
-          # produce deployment zip at repo root
           ZIP="$GITHUB_WORKSPACE/function-package.zip"
           echo "Creating zip at $ZIP"
           cd "$DIR"
@@ -175,20 +163,27 @@ jobs:
 
       - name: Deploy Function App (robust)
         env:
-         FUNCTION_NAME: ${{ env.FUNCTION_NAME }}
-         RG: ${{ env.RG }}
-         run: |
+          FUNCTION_NAME: ${{ env.FUNCTION_NAME }}
+          RG: ${{ env.RG }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -e
           ZIP="$GITHUB_WORKSPACE/function-package.zip"
-           set -e
+
+          if [ -z "$FUNCTION_NAME" ] || [ -z "$RG" ]; then
+            echo "##[error] FUNCTION_NAME or RG is empty. Ensure terraform outputs were captured."
+            echo "FUNCTION_NAME='$FUNCTION_NAME' RG='$RG'"
+            exit 1
+          fi
 
           echo "Attempting az CLI zip deployment (retries)..."
           for i in 1 2 3; do
-          if az functionapp deployment source config-zip --resource-group "$RG" --name "$FUNCTION_NAME" --src "$ZIP"; then
-          echo "az zipdeploy succeeded on attempt $i"
-          exit 0
-          fi
-          echo "az zipdeploy attempt $i failed — retrying in $((i*10))s..."
-          sleep $((i*10))
+            if az functionapp deployment source config-zip --resource-group "$RG" --name "$FUNCTION_NAME" --src "$ZIP"; then
+              echo "az zipdeploy succeeded on attempt $i"
+              exit 0
+            fi
+            echo "az zipdeploy attempt $i failed — retrying in $((i*10))s..."
+            sleep $((i*10))
           done
 
           echo "az zipdeploy failed after retries — trying direct Kudu zipdeploy as fallback"
@@ -203,11 +198,10 @@ jobs:
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -u "$USER:$PWD" -X POST "$KUDU_API" --data-binary @"$ZIP" -H "Content-Type: application/zip" --max-time 300)
           echo "Kudu zipdeploy status: $HTTP_STATUS"
           if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
-          echo "Kudu deploy succeeded"
-          exit 0
+            echo "Kudu deploy succeeded"
+            exit 0
           fi
 
           echo "Deployment failed (az + Kudu) — check app health and logs"
           az webapp log tail --name "$FUNCTION_NAME" --resource-group "$RG" || true
           exit 1
-          shell: bash
