@@ -59,8 +59,8 @@ jobs:
         id: tfoutputs
         working-directory: terraform
         run: |
-          FN=$(terraform output -raw funclinx1)
-          RG=$(terraform output -raw demo-func-rg)
+          FN=$(terraform output -raw function_app_name)
+          RG=$(terraform output -raw resource_group_name)
           echo "FUNCTION_NAME=$FN" >> $GITHUB_ENV
           echo "RG=$RG" >> $GITHUB_ENV
           echo "function_name=$FN" >> $GITHUB_OUTPUT
@@ -87,8 +87,8 @@ jobs:
       # Step 11: Deploy function
       - name: Deploy function
         run: |
-          echo "Deploying funclinx1 to demo-func-rg"
+          echo "Deploying $function_app_name to $resource_group_name"
           az functionapp deployment source config-zip \
-            --resource-group "demo-func-rg" \
-            --name "funclinx1" \
+            --resource-group "$RG" \
+            --name "$FN" \
             --src "$GITHUB_WORKSPACE/function-package.zip"
