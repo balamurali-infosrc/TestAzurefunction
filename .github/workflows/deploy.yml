@@ -61,10 +61,10 @@ jobs:
         run: |
           FN=$(terraform output -raw function_name_name)
           RG=$(terraform output -raw resource_group)
-          echo "FUNCTION_NAME=$FN" >> $GITHUB_ENV
-          echo "RG=$RG" >> $GITHUB_ENV
-          echo "function_name=$FN" >> $GITHUB_OUTPUT
-          echo "resource_group=$RG" >> $GITHUB_OUTPUT
+          printf "FUNCTION_NAME=%s\n" "$FN" >> $GITHUB_ENV
+          printf "RG=%s\n" "$RG" >> $GITHUB_ENV
+          printf "function_name=%s\n" "$FN" >> $GITHUB_OUTPUT
+          printf "resource_group=%s\n" "$RG" >> $GITHUB_OUTPUT
 
       # Step 9: Build Node project
       - name: Install dependencies
@@ -87,8 +87,15 @@ jobs:
       # Step 11: Deploy function
       - name: Deploy function
         run: |
-          echo "Deploying $function_app_name to $resource_group_name"
-          az functionapp deployment source config-zip \
-            --resource-group "$RG" \
-            --name "$FN" \
-            --src "$GITHUB_WORKSPACE/function-package.zip"
+         - name: Deploy Function App
+  run: |
+    echo "Deploying $FUNCTION_NAME to $RG"
+    az functionapp deployment source config-zip \
+      --resource-group "$RG" \
+      --name "$FUNCTION_NAME" \
+      --src "$GITHUB_WORKSPACE/function-package.zip"
+      env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
