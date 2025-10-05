@@ -51,30 +51,56 @@ resource "azurerm_storage_account" "sa" {
   }
 }
 
-resource "azurerm_app_service_plan" "plan" {
-  name                = "${var.function_name}-plan"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  kind                = "Linux"
-  reserved            = true
+# resource "azurerm_app_service_plan" "plan" {
+#   name                = "${var.function_name}-plan"
+#   location            = azurerm_resource_group.rg.location
+#   resource_group_name = azurerm_resource_group.rg.name
+#   kind                = "Linux"
+#   reserved            = true
 
-  sku {
-    tier = "Standard"  # Consumption
-    size = "S1"
-    capacity = 1
+#   sku {
+#     tier = "Standard"  # Consumption
+#     size = "S1"
+#     capacity = 1
 
-  }
-  depends_on = [azurerm_app_service_plan.func]
-}
+#   }
+#   depends_on = [azurerm_app_service_plan.func]
+# }
 # resource "azurerm_service_plan" "plan" {
 #  name                = "${var.function_name}-plan"
 #  location            = azurerm_resource_group.rg.location
 #  resource_group_name = azurerm_resource_group.rg.name
 #  os_type             = "Linux"
-#  sku_name            = "P1v2"
-
+#  sku_name            = "S1"
+#  depends_on = [azurerm_resource_group.rg]
 #   # OS type, kind, reserved are computed automatically
 # }
+resource "azurerm_app_service_plan" "func" {
+  name                = "func-plan"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  sku {
+    tier     = "Standard"
+    size     = "S1"
+    capacity = 1
+  }
+}
+
+resource "azurerm_app_service_plan" "plan" {
+  name                = "main-plan"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+
+  sku {
+    tier     = "PremiumV2"
+    size     = "P1v2"
+    capacity = 1
+  }
+
+  depends_on = [azurerm_app_service_plan.func]  
+}
+
 
 
 resource "azurerm_linux_function_app" "function" {
