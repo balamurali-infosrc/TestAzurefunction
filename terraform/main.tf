@@ -1,6 +1,6 @@
 variable "location" {
   type    = string
-  default = "South India"
+  default = "eastus2"
 }
 
 variable "rg_name" {
@@ -64,7 +64,18 @@ resource "azurerm_app_service_plan" "plan" {
     capacity = 1
 
   }
+  depends_on = [azurerm_app_service_plan.func]
 }
+# resource "azurerm_service_plan" "plan" {
+#  name                = "${var.function_name}-plan"
+#  location            = azurerm_resource_group.rg.location
+#  resource_group_name = azurerm_resource_group.rg.name
+#  os_type             = "Linux"
+#  sku_name            = "P1v2"
+
+#   # OS type, kind, reserved are computed automatically
+# }
+
 
 resource "azurerm_linux_function_app" "function" {
   name                = var.function_name
