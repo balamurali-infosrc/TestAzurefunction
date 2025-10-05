@@ -87,11 +87,8 @@ jobs:
       # Step 11: Deploy function
       - name: Deploy function
         run: |
-         - name: Deploy Function App
-  run: |
-    echo "Deploying $FUNCTION_NAME to $RG"
-    az functionapp deployment source config-zip \
-      --resource-group "$RG" \
-      --name "$FUNCTION_NAME" \
-      --src "$GITHUB_WORKSPACE/function-package.zip"
-      
+          echo "Deploying $function_name_name to $resource_group"
+          az functionapp deployment source config-zip \
+            --resource-group "$RG" \
+            --name "$FN" \
+            --src "$GITHUB_WORKSPACE/function-package.zip"
