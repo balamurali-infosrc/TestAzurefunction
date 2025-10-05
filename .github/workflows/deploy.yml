@@ -59,8 +59,8 @@ jobs:
         id: tfoutputs
         working-directory: terraform
         run: |
-          FN=$(terraform output -raw function_app_name)
-          RG=$(terraform output -raw resource_group_name)
+          FN=$(terraform output -raw function_name_name)
+          RG=$(terraform output -raw resource_group)
           echo "FUNCTION_NAME=$FN" >> $GITHUB_ENV
           echo "RG=$RG" >> $GITHUB_ENV
           echo "function_name=$FN" >> $GITHUB_OUTPUT
