@@ -173,19 +173,41 @@ jobs:
           zip -r "$ZIP" . >/dev/null
           echo "Created $ZIP with size: $(stat -c%s "$ZIP") bytes"
 
-      - name: Deploy Function App (zip)
-        run: |
-          if [ -z "$FUNCTION_NAME" ] || [ -z "$RG" ]; then
-            echo "##[error] FUNCTION_NAME or RG is empty. Ensure terraform outputs were captured."
-            echo "FUNCTION_NAME='$FUNCTION_NAME' RG='$RG'"
-            exit 1
+      - name: Deploy Function App (robust)
+        env:
+         FUNCTION_NAME: ${{ env.FUNCTION_NAME }}
+         RG: ${{ env.RG }}
+         run: |
+          ZIP="$GITHUB_WORKSPACE/function-package.zip"
+           set -e
+
+          echo "Attempting az CLI zip deployment (retries)..."
+          for i in 1 2 3; do
+          if az functionapp deployment source config-zip --resource-group "$RG" --name "$FUNCTION_NAME" --src "$ZIP"; then
+          echo "az zipdeploy succeeded on attempt $i"
+          exit 0
+          fi
+          echo "az zipdeploy attempt $i failed — retrying in $((i*10))s..."
+          sleep $((i*10))
+          done
+
+          echo "az zipdeploy failed after retries — trying direct Kudu zipdeploy as fallback"
+          PP=$(az webapp deployment list-publishing-profiles --name "$FUNCTION_NAME" --resource-group "$RG" -o json)
+          USER=$(echo "$PP" | jq -r '.[0].userName')
+          PWD=$(echo "$PP" | jq -r '.[0].userPWD')
+          KUDU_URL=$(echo "$PP" | jq -r '.[0].publishUrl' | sed 's/:443$//')
+          KUDU_API="https://${KUDU_URL}/api/zipdeploy"
+          echo "KUDU_API=$KUDU_API"
+
+          # Upload with curl (long timeout)
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -u "$USER:$PWD" -X POST "$KUDU_API" --data-binary @"$ZIP" -H "Content-Type: application/zip" --max-time 300)
+          echo "Kudu zipdeploy status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+          echo "Kudu deploy succeeded"
+          exit 0
           fi
 
-          echo "Deploying $FUNCTION_NAME to resource group $RG"
-          # az login already performed by azure/login earlier in the job
-          az functionapp deployment source config-zip \
-            --resource-group "$RG" \
-            --name "$FUNCTION_NAME" \
-            --src "$GITHUB_WORKSPACE/function-package.zip"
-        env:
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          echo "Deployment failed (az + Kudu) — check app health and logs"
+          az webapp log tail --name "$FUNCTION_NAME" --resource-group "$RG" || true
+          exit 1
+          shell: bash
