@@ -13,23 +13,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repo
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Step 2: Setup Node (for function deployment)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      # Step 3: Setup Terraform
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.8.5
 
-      # Step 4: Azure login
       - name: Azure Login
         uses: azure/login@v1
         with:
@@ -39,97 +35,157 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           auth-type: service_principal
 
-      # Step 5: Terraform init
       - name: Terraform Init
         working-directory: terraform
-        run: terraform init
+        run: terraform init -input=false
 
-      # Step 6: Terraform plan (optional)
       - name: Terraform Plan
         working-directory: terraform
-        run: terraform plan
+        run: terraform plan -input=false
 
-      # Step 7: Terraform apply
       - name: Terraform Apply
         working-directory: terraform
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -input=false
 
-      # Step 8: Get Terraform outputs (Function App and Resource Group)
-      - name: Get Terraform outputs
+      - name: Get Terraform outputs (safe)
         id: tfoutputs
         working-directory: terraform
         run: |
-         # read raw outputs, take only first line and strip CRs to avoid bad formats
+          # Read the outputs that exist in your state (you reported these names)
           FN=$(terraform output -raw function_name_name 2>/dev/null | sed -n '1p' | tr -d '\r')
           RG=$(terraform output -raw resource_group 2>/dev/null | sed -n '1p' | tr -d '\r')
 
-          # debug: show captured values in the job log (optional)
           echo "Captured FN='$FN'"
           echo "Captured RG='$RG'"
 
-          # write to GITHUB_ENV using the heredoc form (safe for any content)
-           {
-           printf 'FUNCTION_NAME<<EOF\n'
-           printf '%s\n' "$FN"
-           printf 'EOF\n'
-           } >> $GITHUB_ENV
-
-           {
-           printf 'RG<<EOF\n'
-           printf '%s\n' "$RG"
-           printf 'EOF\n'
-           } >> $GITHUB_ENV
-
-            # also write to GITHUB_OUTPUT using heredoc (for composite actions / job outputs)
-           {
-           printf 'function_name<<EOF\n'
-           printf '%s\n' "$FN"
-           printf 'EOF\n'
-           } >> $GITHUB_OUTPUT
-
-           {
-           printf 'resource_group<<EOF\n'
-           printf '%s\n' "$RG"
+          # Write to GITHUB_ENV using the heredoc form (safe for any content)
+          {
+            printf 'FUNCTION_NAME<<EOF\n'
+            printf '%s\n' "$FN"
             printf 'EOF\n'
-           } >> $GITHUB_OUTPUT
+          } >> $GITHUB_ENV
 
-     # FN=$(terraform output -raw function_name_name)
-          # RG=$(terraform output -raw resource_group)
-          # printf "FUNCTION_NAME=%s\n" "$FN" >> $GITHUB_ENV
-          # printf "RG=%s\n" "$RG" >> $GITHUB_ENV
-          # printf "function_name=%s\n" "$FN" >> $GITHUB_OUTPUT
-          # printf "resource_group=%s\n" "$RG" >> $GITHUB_OUTPUT
+          {
+            printf 'RG<<EOF\n'
+            printf '%s\n' "$RG"
+            printf 'EOF\n'
+          } >> $GITHUB_ENV
 
-      - name: Show workspace (debug)
+          # Also write to GITHUB_OUTPUT for job outputs
+          {
+            printf 'function_name<<EOF\n'
+            printf '%s\n' "$FN"
+            printf 'EOF\n'
+          } >> $GITHUB_OUTPUT
+
+          {
+            printf 'resource_group<<EOF\n'
+            printf '%s\n' "$RG"
+            printf 'EOF\n'
+          } >> $GITHUB_OUTPUT
+
+      - name: Show repo layout (debug)
         run: |
           echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
           pwd
+          echo "Repo root listing:"
           ls -la
+          echo "Looking for likely function source folders..."
+          find . -maxdepth 4 -type d \( -iname "*function*" -o -iname "function-src" -o -iname "src" \) -print || true
 
-      # Build: set working-directory to where your function code actually lives.
-      # Change src/function below to your real path (e.g. ./ or function-src/)
-      - name: Build Function (npm)
-        working-directory: src/function
+      - name: Locate function source folder
+        id: findfunc
         run: |
-          # make sure dir exists — if not, create or fail with helpful message
-          if [ ! -d "$PWD" ]; then
-            echo "ERROR: working-directory src/function does not exist. ls output:"
-            ls -la ..
+          # prefer exact folder names in order of likelihood
+          CANDIDATES=(
+            "src/function"
+            "function-src"
+            "function"
+            "src"
+            "."
+          )
+          FOUND=""
+          for d in "${CANDIDATES[@]}"; do
+            if [ -d "$GITHUB_WORKSPACE/$d" ]; then
+              FOUND="$d"
+              break
+            fi
+          done
+
+          # fallback: try to discover first folder named *function*
+          if [ -z "$FOUND" ]; then
+            DISCOVERED=$(find . -maxdepth 3 -type d -iname "*function*" -print -quit || true)
+            if [ -n "$DISCOVERED" ]; then
+              # strip leading ./ if present
+              FOUND="${DISCOVERED#./}"
+            fi
+          fi
+
+          if [ -z "$FOUND" ]; then
+            echo "No function source folder found in repo. Creating src/function and attempting to copy function-src if present."
+            mkdir -p src/function
+            if [ -d "function-src" ]; then
+              cp -r function-src/* src/function/ || true
+              FOUND="src/function"
+            else
+              # leave FOUND empty to fail later with clear message
+              FOUND=""
+            fi
+          fi
+
+          if [ -z "$FOUND" ]; then
+            echo "##[error]Could not find a function source folder. Please place your function app code in one of: src/function, function-src, function, src, or root."
             exit 1
           fi
 
-          npm install
-          npm run build || true   # if you have a build step; optional
+          echo "function_dir=$FOUND" >> $GITHUB_OUTPUT
+          echo "FUNCTION_DIR=$FOUND" >> $GITHUB_ENV
+          echo "Found function folder: $FOUND"
+
+      - name: Build Function (npm) if package.json present
+        run: |
+          # read location from env
+          DIR="${FUNCTION_DIR:-src/function}"
+          echo "Building function at: $DIR"
+          if [ ! -d "$DIR" ]; then
+            echo "##[error]Directory $DIR does not exist (unexpected). Aborting."
+            ls -la
+            exit 1
+          fi
+
+          cd "$DIR"
+
+          if [ ! -f package.json ]; then
+            echo "No package.json in $DIR — skipping npm install/build. Creating a zip of contents anyway."
+          else
+            echo "package.json found — running npm install"
+            npm install
+            # run build if it exists
+            if grep -q "\"build\"" package.json; then
+              npm run build || true
+            fi
+          fi
+
           # produce deployment zip at repo root
-          zip -r "$GITHUB_WORKSPACE/function-package.zip" .
+          ZIP="$GITHUB_WORKSPACE/function-package.zip"
+          echo "Creating zip at $ZIP"
+          cd "$DIR"
+          zip -r "$ZIP" . >/dev/null
+          echo "Created $ZIP with size: $(stat -c%s "$ZIP") bytes"
 
       - name: Deploy Function App (zip)
         run: |
-          echo "Deploying $FUNCTION_NAME to $RG"
-          az login --service-principal -u "${{ secrets.AZURE_CLIENT_ID }}" -p "${{ secrets.AZURE_CLIENT_SECRET }}" --tenant "${{ secrets.AZURE_TENANT_ID }}"
+          if [ -z "$FUNCTION_NAME" ] || [ -z "$RG" ]; then
+            echo "##[error] FUNCTION_NAME or RG is empty. Ensure terraform outputs were captured."
+            echo "FUNCTION_NAME='$FUNCTION_NAME' RG='$RG'"
+            exit 1
+          fi
+
+          echo "Deploying $FUNCTION_NAME to resource group $RG"
+          # az login already performed by azure/login earlier in the job
           az functionapp deployment source config-zip \
             --resource-group "$RG" \
             --name "$FUNCTION_NAME" \
             --src "$GITHUB_WORKSPACE/function-package.zip"
         env:
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
