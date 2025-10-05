@@ -92,36 +92,44 @@ jobs:
            printf '%s\n' "$RG"
             printf 'EOF\n'
            } >> $GITHUB_OUTPUT
-          # FN=$(terraform output -raw function_name_name)
+
+     # FN=$(terraform output -raw function_name_name)
           # RG=$(terraform output -raw resource_group)
           # printf "FUNCTION_NAME=%s\n" "$FN" >> $GITHUB_ENV
           # printf "RG=%s\n" "$RG" >> $GITHUB_ENV
           # printf "function_name=%s\n" "$FN" >> $GITHUB_OUTPUT
           # printf "resource_group=%s\n" "$RG" >> $GITHUB_OUTPUT
 
-      # Step 9: Build Node project
-      - name: Install dependencies
-        working-directory: src/function
-        run: npm install
+      - name: Show workspace (debug)
+        run: |
+          echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
+          pwd
+          ls -la
 
-      - name: Build function
-        working-directory: src/function
-        run: npm run build || echo "no build step"
-
-      # Step 10: Zip function
-      - name: Zip function package
+      # Build: set working-directory to where your function code actually lives.
+      # Change src/function below to your real path (e.g. ./ or function-src/)
+      - name: Build Function (npm)
         working-directory: src/function
         run: |
-          ZIP_PATH="$GITHUB_WORKSPACE/function-package.zip"
-          rm -f "$ZIP_PATH"
-          zip -r "$ZIP_PATH" .
-          echo "Created $ZIP_PATH"
+          # make sure dir exists — if not, create or fail with helpful message
+          if [ ! -d "$PWD" ]; then
+            echo "ERROR: working-directory src/function does not exist. ls output:"
+            ls -la ..
+            exit 1
+          fi
 
-      # Step 11: Deploy function
-      - name: Deploy function
+          npm install
+          npm run build || true   # if you have a build step; optional
+          # produce deployment zip at repo root
+          zip -r "$GITHUB_WORKSPACE/function-package.zip" .
+
+      - name: Deploy Function App (zip)
         run: |
-          echo "Deploying $function_name_name to $resource_group"
+          echo "Deploying $FUNCTION_NAME to $RG"
+          az login --service-principal -u "${{ secrets.AZURE_CLIENT_ID }}" -p "${{ secrets.AZURE_CLIENT_SECRET }}" --tenant "${{ secrets.AZURE_TENANT_ID }}"
           az functionapp deployment source config-zip \
             --resource-group "$RG" \
-            --name "$FN" \
+            --name "$FUNCTION_NAME" \
             --src "$GITHUB_WORKSPACE/function-package.zip"
+        env:
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
