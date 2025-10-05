@@ -50,17 +50,14 @@ resource "azurerm_storage_account" "sa" {
   }
 }
 
-resource "azurerm_app_service_plan" "plan" {
+resource "azurerm_service_plan" "plan" {
   name                = "${var.function_name}-plan"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  kind                = "Linux"
+  os_type             = "Linux"
+  kind                = "linux"
   reserved            = true
-
-  sku {
-    tier = "PremiumV2  "  # Consumption
-    size = "P1v2 "
-  }
+  sku_name = "B1"
 }
 
 resource "azurerm_linux_function_app" "function" {
