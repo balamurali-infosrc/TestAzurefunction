@@ -61,10 +61,10 @@ jobs:
         run: |
           FN=$(terraform output -raw funclinx1)
           RG=$(terraform output -raw demo-func-rg)
-          echo "FUNCTION_NAME=funclinx1" >> $GITHUB_ENV
-          echo "RG=demo-func-rg" >> $GITHUB_ENV
-          echo "function_name=funclinx1" >> $GITHUB_OUTPUT
-          echo "resource_group=demo-func-rg" >> $GITHUB_OUTPUT
+          echo "FUNCTION_NAME=$FN" >> $GITHUB_ENV
+          echo "RG=$RG" >> $GITHUB_ENV
+          echo "function_name=$FN" >> $GITHUB_OUTPUT
+          echo "resource_group=$RG" >> $GITHUB_OUTPUT
 
       # Step 9: Build Node project
       - name: Install dependencies

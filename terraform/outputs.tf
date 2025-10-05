@@ -1,4 +1,4 @@
-output "function_name" {
+output "function_name_name" {
   value = azurerm_linux_function_app.function.name
 }
 
