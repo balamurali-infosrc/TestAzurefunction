@@ -76,7 +76,7 @@ resource "azurerm_storage_account" "sa" {
 #   # OS type, kind, reserved are computed automatically
 # }
 resource "azurerm_app_service_plan" "func" {
-  name                = "func-plan"
+  name                = "func-plan1"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 
