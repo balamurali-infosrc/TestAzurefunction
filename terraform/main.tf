@@ -1,6 +1,6 @@
 variable "location" {
   type    = string
-  default = "eastus"
+  default = "South India"
 }
 
 variable "rg_name" {
@@ -20,14 +20,15 @@ resource "random_string" "suffix" {
   numeric = true
   special = false
 }
-# resource "azurerm_resource_group" "rg" {
-#   name     = var.rg_name
-#   location = var.location
-# }
 resource "azurerm_resource_group" "rg" {
-  name     = "demo-func-rg"
-  location = "eastus"
+  name     = var.rg_name
+  location = var.location
 }
+# resource "azurerm_resource_group" "rg" {
+#   name     = "demo-func-rg"
+#   location = "South India"
+# }
+
 # Storage account name rules: lowercase, 3-24 chars, globally unique
 # locals {
 #   sa_base = replace(lower("${var.function_name}sa${random_string.suffix.result}"), "-", "")
