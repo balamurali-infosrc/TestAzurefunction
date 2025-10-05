@@ -1,6 +1,6 @@
 variable "location" {
   type    = string
-  default = "eastus"
+  default = "East US"
 }
 
 variable "rg_name" {
@@ -26,7 +26,7 @@ resource "random_string" "suffix" {
 # }
 resource "azurerm_resource_group" "rg" {
   name     = "demo-func-rg"
-  location = "eastus"
+  location = "EastUS"
 }
 # Storage account name rules: lowercase, 3-24 chars, globally unique
 # locals {
@@ -54,12 +54,12 @@ resource "azurerm_app_service_plan" "plan" {
   name                = "${var.function_name}-plan"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  kind                = "Linux"
+  kind                = "FunctionApp"
   reserved            = true
 
   sku {
-    tier = "Standard"  # Consumption
-    size = "S1"
+    tier = "Dynamic"  # Consumption
+    size = "Y1"
   }
 }
 
