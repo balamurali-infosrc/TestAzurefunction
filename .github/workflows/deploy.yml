@@ -59,12 +59,45 @@ jobs:
         id: tfoutputs
         working-directory: terraform
         run: |
-          FN=$(terraform output -raw function_name_name)
-          RG=$(terraform output -raw resource_group)
-          printf "FUNCTION_NAME=%s\n" "$FN" >> $GITHUB_ENV
-          printf "RG=%s\n" "$RG" >> $GITHUB_ENV
-          printf "function_name=%s\n" "$FN" >> $GITHUB_OUTPUT
-          printf "resource_group=%s\n" "$RG" >> $GITHUB_OUTPUT
+         # read raw outputs, take only first line and strip CRs to avoid bad formats
+          FN=$(terraform output -raw function_name_name 2>/dev/null | sed -n '1p' | tr -d '\r')
+          RG=$(terraform output -raw resource_group 2>/dev/null | sed -n '1p' | tr -d '\r')
+
+          # debug: show captured values in the job log (optional)
+          echo "Captured FN='$FN'"
+          echo "Captured RG='$RG'"
+
+          # write to GITHUB_ENV using the heredoc form (safe for any content)
+           {
+           printf 'FUNCTION_NAME<<EOF\n'
+           printf '%s\n' "$FN"
+           printf 'EOF\n'
+           } >> $GITHUB_ENV
+
+           {
+           printf 'RG<<EOF\n'
+           printf '%s\n' "$RG"
+           printf 'EOF\n'
+           } >> $GITHUB_ENV
+
+            # also write to GITHUB_OUTPUT using heredoc (for composite actions / job outputs)
+           {
+           printf 'function_name<<EOF\n'
+           printf '%s\n' "$FN"
+           printf 'EOF\n'
+           } >> $GITHUB_OUTPUT
+
+           {
+           printf 'resource_group<<EOF\n'
+           printf '%s\n' "$RG"
+            printf 'EOF\n'
+           } >> $GITHUB_OUTPUT
+          # FN=$(terraform output -raw function_name_name)
+          # RG=$(terraform output -raw resource_group)
+          # printf "FUNCTION_NAME=%s\n" "$FN" >> $GITHUB_ENV
+          # printf "RG=%s\n" "$RG" >> $GITHUB_ENV
+          # printf "function_name=%s\n" "$FN" >> $GITHUB_OUTPUT
+          # printf "resource_group=%s\n" "$RG" >> $GITHUB_OUTPUT
 
       # Step 9: Build Node project
       - name: Install dependencies
