@@ -55,9 +55,9 @@ resource "azurerm_service_plan" "plan" {
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
   os_type             = "Linux"
-  # kind                = "linux"
-  # reserved            = true
-  sku_name = "B1"
+  kind                = "linux"
+  reserved            = true
+  sku_name = "EP2"
 }
 
 resource "azurerm_linux_function_app" "function" {
