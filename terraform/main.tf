@@ -1,6 +1,6 @@
 variable "location" {
   type    = string
-  default = "East US"
+  default = "eastus"
 }
 
 variable "rg_name" {
@@ -26,7 +26,7 @@ resource "random_string" "suffix" {
 # }
 resource "azurerm_resource_group" "rg" {
   name     = "demo-func-rg"
-  location = "EastUS"
+  location = "eastus"
 }
 # Storage account name rules: lowercase, 3-24 chars, globally unique
 # locals {
@@ -50,22 +50,22 @@ resource "azurerm_storage_account" "sa" {
   }
 }
 
-resource "azurerm_app_service_plan" "plan" {
+resource "azurerm_service_plan" "plan" {
   name                = "${var.function_name}-plan"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  sku {
-    capacity = 1
-    tier = "PremiumV2  "  # Consumption
-    size = "P1v2 "
+  os_type = "Linux"
+  sku_name = "P1v2"
   }
-}
+
+  # OS type, kind, and reserved are computed automatically
+
 
 resource "azurerm_linux_function_app" "function" {
   name                = var.function_name
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  service_plan_id     = azurerm_app_service_plan.plan.id
+  service_plan_id     = azurerm_service_plan.plan.id
   storage_account_name       = azurerm_storage_account.sa.name
   storage_account_access_key = azurerm_storage_account.sa.primary_access_key
   functions_extension_version = "~4" # Azure Functions runtime version
